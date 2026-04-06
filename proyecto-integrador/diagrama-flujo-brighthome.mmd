@@ -1,0 +1,58 @@
+flowchart TD
+    subgraph PASO1["PASO 1: Entrada y Enriquecimiento"]
+        A([Airtable Form<br>Trigger NPS 1-10])
+        B[Supabase PostgreSQL<br>Consulta por email<br>Enriquecimiento datos]
+        C[Merge / Set<br>Payload Enriquecido<br>feedback + compra]
+        A -->|email cliente| B
+        B -->|datos compra| C
+    end
+
+    subgraph PASO2["PASO 2: Análisis con IA"]
+        D[OpenAI API<br>Análisis de Sentimiento<br>Output: JSON con sentimiento<br>categoría, resumen, acción]
+    end
+
+    subgraph PASO3["PASO 3: Agente de Decisión"]
+        E{AGENTE<br>Router por<br>categoría}
+        F[Google Sheets<br>Hoja Logs<br>TODOS los casos]
+        E -->|TODOS logean| F
+    end
+
+    subgraph PASO4["PASO 4: Ejecución de Acciones"]
+        G[CAMINO 1<br>Clientes Felices<br>satisfaccion<br>NPS 9-10]
+        H[CAMINO 2<br>Ideas y Mejoras<br>sugerencia<br>NPS 7-8]
+        I[CAMINO 3<br>Casos Neutros<br>observacion<br>NPS 7-8]
+        J[CAMINO 4<br>Casos Técnicos<br>falla_tecnica<br>NPS 0-6]
+        K[CAMINO 5<br>Casos Críticos<br>reclamo<br>NPS 0-6]
+        L[REVISIÓN MANUAL<br>error / JSON inválido<br>pendiente_revisión]
+
+        G1[Airtable: Clientes felices<br>Email agradecimiento]
+        H1[IA etiqueta temática<br>Airtable: Sugerencias]
+        I1[Airtable: Observaciones]
+        J1[Airtable: Soporte técnico<br>Email interno equipo<br>estado_ticket: abierto]
+        K1[Airtable: Reclamos<br>Email alerta + disculpa<br>prioridad: alta]
+        L1[Google Sheets: pendiente<br>Slack #atencion-clientes<br>Email alerta responsable]
+
+        G --> G1
+        H --> H1
+        I --> I1
+        J --> J1
+        K --> K1
+        L --> L1
+    end
+
+    subgraph SEGUIMIENTO["SEGUIMIENTO AUTOMÁTICO 48hs"]
+        M([Schedule Trigger<br>cada X horas])
+        N{contactado = false?}
+        O[Slack #atencion-clientes<br>Alerta detractores]
+        M --> N
+        N -->|Sí| O
+    end
+
+    C -->|payload completo| D
+    D -->|JSON análisis| E
+    E -->|satisfaccion| G
+    E -->|sugerencia| H
+    E -->|observacion| I
+    E -->|falla_tecnica| J
+    E -->|reclamo| K
+    E -->|error/inválido| L
